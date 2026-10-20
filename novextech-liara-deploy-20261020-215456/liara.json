@@ -1,0 +1,11 @@
+{
+  "app": "novextech",
+  "platform": "docker",
+  "port": 8787,
+  "disks": [
+    {
+      "name": "novextech-data",
+      "mountTo": "/data"
+    }
+  ]
+}

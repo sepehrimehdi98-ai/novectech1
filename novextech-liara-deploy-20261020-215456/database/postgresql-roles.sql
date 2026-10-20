@@ -1,0 +1,22 @@
+-- Run as the database owner after schema creation; replace every placeholder.
+-- Do not commit real passwords or run this file with placeholder values.
+-- PostgreSQL does not support CREATE ROLE IF NOT EXISTS; rotate credentials via
+-- your provider and maintain this role policy in the deployment secret store.
+
+-- Example setup (run interactively with strong, unique passwords):
+-- CREATE ROLE novextech_migrator LOGIN PASSWORD '<unique-migration-secret>';
+-- CREATE ROLE novextech_app LOGIN PASSWORD '<unique-runtime-secret>';
+-- CREATE ROLE novextech_chat LOGIN PASSWORD '<unique-chat-secret>';
+-- GRANT CONNECT ON DATABASE <database_name> TO novextech_migrator, novextech_app, novextech_chat;
+-- GRANT USAGE ON SCHEMA public TO novextech_migrator, novextech_app, novextech_chat;
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO novextech_app;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO novextech_app;
+-- GRANT SELECT ON rag_documents, rag_chunks, posts TO novextech_chat;
+-- ALTER DEFAULT PRIVILEGES FOR ROLE novextech_migrator IN SCHEMA public
+--   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO novextech_app;
+-- ALTER DEFAULT PRIVILEGES FOR ROLE novextech_migrator IN SCHEMA public
+--   GRANT SELECT ON TABLES TO novextech_chat;
+
+-- Review: RAG approval/reindexing needs write access to rag_documents/rag_chunks;
+-- for deployments that split API and chat into separate processes, give that
+-- write access only to the admin/API role. The chat role remains read-only.

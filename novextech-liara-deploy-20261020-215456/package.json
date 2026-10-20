@@ -1,0 +1,33 @@
+{
+  "name": "novextech-bilingual",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader native",
+    "build": "tsc --noEmit && vite build --configLoader native",
+    "preview": "vite preview --configLoader native",
+    "format": "oxfmt",
+    "api": "node server/index.mjs",
+    "start": "node server/index.mjs",
+    "test": "node --test --test-isolation=none test/*.test.mjs"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "oxfmt": "^0.2.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.5"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
