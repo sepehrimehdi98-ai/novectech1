@@ -1,76 +1,55 @@
-# Deploy Novextech on Liara
+# Deploy Novextech on Liara's Node.js platform
 
-The project is prepared for a single-instance Liara Docker app. `Dockerfile` builds the frontend and runs the Node.js 24 API server; `liara.json` sets the container port and mounts a persistent disk at `/data`; the database file is `/data/novextech.sqlite`. The current app uses SQLite, not PostgreSQL. Do not run multiple app instances against this SQLite database.
+The repository root is configured for Liara Node.js 24. It has a root `package.json` so Liara's Node builder can install and run the app. The frontend source and server remain in `novextech-liara-deploy-20261020-215456/`; the root build runs the app build and copies its static output to `/dist`, which the server serves at runtime. The app uses SQLite, so run one instance and keep the database on the attached persistent disk at `/data/novextech.sqlite`.
 
-## Resource sizing for the first deployment
+## 1. Check the GitHub connection
 
-Start with one app instance and 1 GB RAM if that size is available in your Liara plan. The application does not run an AI model locally; chat and embeddings are sent to OpenRouter, and videos stay on Kavimo. This keeps the app's memory needs modest. A 512 MB instance may be enough for a quiet pilot, but 1 GB gives more headroom for Node.js, SQLite, builds/startup, and concurrent requests. Watch Liara's memory graphs after real traffic and increase the allocation if sustained use approaches 70–80% or the process restarts.
+Use the existing `novextech` Liara app and its current GitHub connection to `sepehrimehdi98-ai/novectech1` on branch `main`. Do not create another app or repository for this code change. Build from the repository root.
 
-Use the smallest practical persistent disk, with 5 GB as a comfortable starting point if that is the offered size. The SQLite database initially contains small text records and embeddings; article images are currently external HTTPS URLs and videos are stored by Kavimo. The app database should therefore start far below 1 GB. Do not store video files or backups on this disk; back up the database separately and monitor disk growth. These are planning estimates, not measured Liara runtime usage; confirm the available RAM/disk sizes and prices in your account before choosing a plan.
+The `liara.json` file selects the Node.js platform, Node 24, port 8787, and disk `novextech-data` mounted at `/data`. The root `package.json` post-install hook runs `npm ci --include=dev` in the nested app folder; the build runs TypeScript/Vite and stages `dist` at the root; the start script launches the existing API server. The server listens on Liara's `PORT` environment variable.
 
-## 1. Put the project in GitHub
+If Liara still identifies the existing app as Docker or rejects the Node deployment, stop before creating another billable app and ask Liara support whether the current app platform can be changed. Repository files cannot change the platform assigned to an already-created Liara app.
 
-Push the project to a private GitHub repository. Confirm that the repository contains `Dockerfile`, `.dockerignore`, and `liara.json` at its root. The ignore files exclude local databases and secrets. Never commit `.env.local`, `.local-admin.txt`, or files from `data/`.
+## 2. Attach persistent storage
 
-The included GitHub Actions workflow runs tests and a production build on pushes and pull requests. A green check confirms the code builds; it does not deploy the app or verify live OpenRouter/Kavimo credentials.
+In the existing app, make sure the persistent disk named `novextech-data` is attached at `/data`. The database path must be `/data/novextech.sqlite`. Storage outside `/data` may be ephemeral after a redeploy. Do not scale this SQLite app to multiple instances.
 
-## 2. Create the Liara app and persistent disk
+## 3. Set environment variables in Liara
 
-Create a Docker app in Liara and connect/import the GitHub repository if that option is enabled for your account. Select the intended production branch and build from the repository root so Liara finds the included Dockerfile and `liara.json`. The app name in `liara.json` is `novextech`; change it to the exact Liara app identifier if you chose another name.
-
-Create or attach a persistent disk named `novextech-data` and mount it at `/data` (the path already declared in `liara.json`). Size the disk according to the Liara plan you selected. App container storage outside that mount is temporary; the database must remain on `/data` across redeploys. Kavimo stores the video files, so they do not consume the app disk.
-
-If the GitHub connection is unavailable, use Liara's CLI from a local clone. The Liara CLI documents Docker deploys, the config file, and disk mounts; sign in, select the app, and deploy from the project root. Follow the current Liara dashboard/CLI prompts for the exact disk attachment and build settings.
-
-## 3. Set server environment variables
-
-Set these in Liara's app environment settings. Keep all keys server-side; do not prefix them with `VITE_`.
+Add these under the app's environment settings:
 
 ```dotenv
 NODE_ENV=production
 APP_ORIGIN=https://novextech.ir
-HOST=0.0.0.0
-PORT=8787
 DATABASE_PATH=/data/novextech.sqlite
-OPENROUTER_API_KEY=<your OpenRouter key>
 INITIAL_ADMIN_EMAIL=<your admin email>
 INITIAL_ADMIN_PASSWORD=<unique random password, at least 16 characters>
 ```
 
-For Kavimo, add these when ready:
+Add `OPENROUTER_API_KEY` for Nora when ready. Add the Kavimo settings later when needed:
 
 ```dotenv
 KAVIMO_TOKEN=<Kavimo server token>
 KAVIMO_STREAM_DOMAIN=stream.novextech.ir
-KAVIMO_LINE_ID=<the Kavimo line that owns the videos, if applicable>
+KAVIMO_LINE_ID=<optional Kavimo line ID>
 ```
 
-Set the public domain to the actual canonical HTTPS origin. If you serve `www.novextech.ir` as a separate origin rather than redirecting it, the app's allowed origins and Kavimo upload domain policy also need to include it.
+Keep these values in Liara's secret environment settings. Never commit them to GitHub or put them in a `VITE_` variable. After the first successful boot creates the admin, remove `INITIAL_ADMIN_PASSWORD` from the settings and restart/redeploy if Liara requires it.
 
-## 4. First boot and admin account
+## 4. Deploy and verify
 
-Deploy and inspect app logs. The server creates the first admin from `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` only when the database has no admin yet. After a successful boot, remove `INITIAL_ADMIN_PASSWORD` from Liara settings and redeploy/restart as required. Sign in at `/admin/login`, store the credential safely, and verify that the session cookie is secure over HTTPS.
+The connected `main` branch should deploy through the existing GitHub integration after the GitHub check succeeds. The CI job installs the nested app dependencies, builds the frontend, and runs the test suite. A green GitHub check confirms those steps, but not the Liara runtime or external service credentials.
 
-Do not set `TRUST_PROXY=1` unless Liara's proxy behavior and the app's client IP handling have been verified. The default rate limiter uses the direct socket address and is per process.
+After Liara reports a successful release, inspect the app logs and verify:
 
-## 5. Connect the domain and smoke-test
+- `/api/health` returns `{"ok":true}`
+- `/admin/login` accepts the initial admin credentials
+- a draft can be published and its public article loads
+- `/robots.txt`, `/sitemap.xml`, and `/llms.txt` load from the production domain
+- Nora responds after `OPENROUTER_API_KEY` is configured
 
-Attach `novextech.ir` to the Liara app and follow Liara's DNS and TLS instructions. Verify the certificate and that the canonical host redirects consistently before enabling admin access.
+Kavimo playback in a blog post uses the public iframe and does not require the management API token. Uploading or browsing the admin video library does need `KAVIMO_TOKEN`. Videos stay on Kavimo and are not stored on Liara.
 
-Check `/api/health`, `/robots.txt`, `/sitemap.xml`, and `/llms.txt` on the public HTTPS domain. Then test admin login, create and publish an English/Persian draft article, confirm the public article URL and language switch, and send Nora both a greeting and a website-planning question. Test the Kavimo flow separately after credentials and the stream domain are verified.
+## Resource and backup notes
 
-## Kavimo dashboard upload fallback
-
-The app already supports linking a video uploaded manually in Kavimo:
-
-1. Upload and wait until Kavimo marks the media ready.
-2. Copy the media's 12-character ID from the Kavimo dashboard.
-3. Open `/admin/blogs`, edit the intended article, and add a `Kavimo video` block where the video should appear.
-4. Paste the ID into `Kavimo media ID`. Add an English and Persian video title, save as a draft, and preview.
-5. Preview the draft and confirm playback. The editor accepts either the ID or full Kavimo iframe code, extracts the ID, and generates `https://stream.novextech.ir/<MEDIA_ID>/iframe`. Publishing and playback do not make a Kavimo API request. The optional upload/library tools still need `KAVIMO_TOKEN` and `KAVIMO_STREAM_DOMAIN`.
-
-If the player does not load in the draft preview, confirm the media ID and that Kavimo has finished processing it. The iframe is public, so anyone who can open the published article can watch it; this setup does not provide private video access.
-
-## Backups and scaling
-
-Back up the persistent disk on a schedule and test restoring a copy before launch. Keep an encrypted backup outside the Liara app and account. Do not treat the container image or an ordinary redeploy as a backup. The current SQLite rate limits and database are per app instance. Before scaling beyond one instance or switching to PostgreSQL, implement and test the PostgreSQL store adapter and migration; the SQL files in `database/` alone do not enable PostgreSQL.
+The application does not run an AI model locally; AI requests go to OpenRouter, and video files stay on Kavimo. A 1 GB RAM plan is a reasonable starting point for a small pilot, subject to actual usage. Watch memory and restart metrics after real traffic. The database and knowledge corpus should initially be small; article images are external URLs. Back up the Liara disk regularly and test restoring a backup. The SQL files for PostgreSQL are design artifacts only; the running implementation uses SQLite.
