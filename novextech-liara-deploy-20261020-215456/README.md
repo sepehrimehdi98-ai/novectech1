@@ -60,7 +60,7 @@ The model name without `:free` is a different paid route, so keep the suffix. Th
 
 Run `npm test` for API and Kavimo contract tests, and `npm run build` for TypeScript and the frontend build. These use mocks for external providers; they do not prove live Kavimo or OpenRouter access.
 
-The backend is a Node server with SQLite. Static hosting of `dist` alone will not run login, articles, chat or video uploads. The repository now includes a Dockerfile and Liara configuration for a Node 24 container with SQLite stored at `/data/novextech.sqlite` on a persistent disk. See `docs/LIARA-DEPLOYMENT.md` for environment setup, GitHub deployment, domain setup, and checks.
+The backend is a Node server with SQLite. Static hosting of `dist` alone will not run login, articles, chat or video uploads. The repository root includes a Liara Node.js 24 entry point that installs the nested app dependencies, builds the frontend, stages its static output for the server, and starts the API. Liara mounts the persistent disk at `/data`; SQLite uses `/data/novextech.sqlite`. See `docs/LIARA-DEPLOYMENT.md` for environment setup, GitHub deployment, domain setup, and checks.
 
 Telegram chat integration and automatic lead capture are not implemented. The AI currently serves the website chat only; Telegram would require a bot/webhook and its own credentials. Some original portfolio content and images came from the Figma prototype and should be reviewed for factual accuracy before publishing.
 
@@ -74,6 +74,6 @@ The schema uses Organization rather than LocalBusiness because Novextech's physi
 
 The API sets MIME sniffing, referrer, frame, permissions, and production CSP/HSTS headers. Production cookies require HTTPS and use HttpOnly/SameSite protection; admin mutations require an Origin check and CSRF token. Login, chat, video-list, upload-session, and playback routes have rate limits. IP-based login/chat/playback limits use the socket address by default; set `TRUST_PROXY=1` only when a trusted reverse proxy overwrites `X-Forwarded-For`. The server binds to `0.0.0.0` in production and uses the platform-provided `PORT`.
 
-For Liara, set `APP_ORIGIN=https://novextech.ir`, `DATABASE_PATH=/data/novextech.sqlite`, `NODE_ENV=production`, and temporary `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` values in the host's secret environment settings. The included container uses Node.js 24 and the first-boot admin flow. Remove `INITIAL_ADMIN_PASSWORD` after the first successful boot. Keep the app at one instance while it uses SQLite.
+For Liara, set `APP_ORIGIN=https://novextech.ir`, `DATABASE_PATH=/data/novextech.sqlite`, `NODE_ENV=production`, and temporary `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` values in the host's secret environment settings. The Liara Node.js service uses Node.js 24 and the first-boot admin flow. Remove `INITIAL_ADMIN_PASSWORD` after the first successful boot. Keep the app at one instance while it uses SQLite.
 
 The production CSP allows the Kavimo player and uploader hosts. If Kavimo changes its player hostname or iframe path, update the allowlist/parser and test it. Before launch, confirm the canonical domain and HTTPS certificate, check sitemap/robots over the public domain, review prototype portfolio claims and images, and test login, publishing, AI replies, and video playback on the real domain.
