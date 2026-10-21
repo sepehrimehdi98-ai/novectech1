@@ -1,6 +1,15 @@
 {
   "app": "novextech",
-  "platform": "docker",
+  "platform": "node",
   "port": 8787,
-  "disks": [{ "name": "novextech-data", "mountTo": "/data" }]
+  "node": {
+    "version": 24,
+    "npmCiFallback": true
+  },
+  "disks": [
+    {
+      "name": "novextech-data",
+      "mountTo": "/data"
+    }
+  ]
 }
