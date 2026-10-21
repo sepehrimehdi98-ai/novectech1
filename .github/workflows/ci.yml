@@ -10,9 +10,6 @@ permissions:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./novextech-liara-deploy-20261020-215456
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -22,8 +19,8 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: novextech-liara-deploy-20261020-215456/package-lock.json
-      - name: Install dependencies
-        run: npm ci
+      - name: Install root deploy wrapper and application dependencies
+        run: npm install
       - name: Build production frontend
         run: npm run build
       - name: Run tests
